@@ -333,19 +333,3 @@ class ApprovalManagerAgent(Agent):
         
         return summary
     
-    def get_agent_status(self) -> Dict[str, Any]:
-        """Get the current status of the approval manager agent."""
-        
-        return {
-            "agent_name": self.name,
-            "status": "ready",
-            "voice_credentials_available": self._has_voice_credentials(),
-            "mock_mode": settings.mock_voice_services,
-            "webhook_configured": bool(settings.webhook_base_url),
-            "capabilities": [
-                "Manager approval workflow",
-                "Voice communication integration",
-                "Approval tracking and logging",
-                "Fallback approval mechanisms"
-            ]
-        }

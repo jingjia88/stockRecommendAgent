@@ -44,8 +44,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title=settings.app_title,
     version=settings.app_version,
-    docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None
+    docs_url="/docs" if settings.debug else None, 
 )
 
 # Add CORS middleware
@@ -107,55 +106,6 @@ async def root():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-
-@app.get("/test-audio")
-async def test_audio():
-    """Test if static audio files are accessible."""
-    import os
-    audio_dir = "static/audio"
-    if os.path.exists(audio_dir):
-        files = os.listdir(audio_dir)
-        return {
-            "audio_directory": audio_dir,
-            "file_count": len(files),
-            "files": files[:5],  # Show first 5 files
-            "sample_url": f"/static/audio/{files[0]}" if files else None
-        }
-    return {"error": "Audio directory not found"}
-
-
-@app.get("/config")
-async def get_config():
-    """Get public configuration."""
-    return {
-        "app_title": settings.app_title,
-        "app_version": settings.app_version,
-        "uses_yahoo_finance": True,
-        "max_news_articles": settings.max_news_articles,
-        "mock_voice_services": settings.mock_voice_services,
-        "debug": settings.debug
-    }
-
-
-@app.get("/team/status")
-async def get_team_status(team: StockRecommendationTeam = Depends(get_team)):
-    """Get the status of all agents in the team."""
-    try:
-        status = await team.get_team_status()
-        return JSONResponse(content=status)
-    except Exception as e:
-        logger.error(f"Error getting team status: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to get team status"
-        )
-
-
 @app.post("/recommend", response_model=StockRecommendationResponse)
 async def get_stock_recommendations(
     request: StockRecommendationRequest,
@@ -176,86 +126,6 @@ async def get_stock_recommendations(
         raise HTTPException(
             status_code=500,
             detail="Failed to generate recommendations"
-        )
-
-
-@app.post("/analyze/news")
-async def analyze_news(
-    query: str,
-    team: StockRecommendationTeam = Depends(get_team)
-):
-    """Analyze financial news for a given query."""
-    try:
-        logger.info(f"Analyzing news for query: {query}")
-        
-        analysis = await team.run_individual_agent(
-            "NewsAnalyst",
-            "Analyze financial news",
-            query=query
-        )
-        
-        return JSONResponse(content=analysis.dict())
-        
-    except Exception as e:
-        logger.error(f"Error analyzing news: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to analyze news"
-        )
-
-
-@app.post("/recommend/stocks")
-async def recommend_stocks(
-    market_analysis: str,
-    max_recommendations: int = 3,
-    risk_preference: str = "medium",
-    team: StockRecommendationTeam = Depends(get_team)
-):
-    """Generate stock recommendations based on market analysis."""
-    try:
-        logger.info("Generating stock recommendations")
-        
-        analysis = await team.run_individual_agent(
-            "StockRecommender",
-            "Generate stock recommendations",
-            market_analysis=market_analysis,
-            sentiment_data=None,
-            max_recommendations=max_recommendations,
-            risk_preference=risk_preference
-        )
-        
-        return JSONResponse(content=analysis.dict())
-        
-    except Exception as e:
-        logger.error(f"Error recommending stocks: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to recommend stocks"
-        )
-
-
-@app.post("/approve")
-async def request_approval(
-    recommendations: list,
-    team: StockRecommendationTeam = Depends(get_team)
-):
-    """Request manager approval for recommendations."""
-    try:
-        logger.info(f"Requesting approval for {len(recommendations)} recommendations")
-        
-        analysis = await team.run_individual_agent(
-            "ApprovalManager",
-            "Request manager approval",
-            recommendations=recommendations
-        )
-        
-        return JSONResponse(content=analysis.dict())
-        
-    except Exception as e:
-        logger.error(f"Error requesting approval: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to request approval"
         )
 
 

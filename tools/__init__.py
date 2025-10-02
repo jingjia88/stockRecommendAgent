@@ -6,7 +6,6 @@ from .voice_services import request_manager_approval
 from .mock_services import (
     get_mock_financial_news,
     get_mock_stock_data,
-    get_mock_sentiment,
     fetch_mock_manager_approval
 )
 
@@ -24,6 +23,5 @@ __all__ = [
     # Mock service tools (for fallback/testing)
     "get_mock_financial_news",
     "get_mock_stock_data", 
-    "get_mock_sentiment",
     "fetch_mock_manager_approval"
 ]
