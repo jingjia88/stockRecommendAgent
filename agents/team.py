@@ -86,6 +86,7 @@ class StockRecommendationTeam:
             try:
                 stock_analysis = await self.stock_recommender.run(
                     task="Generate intelligent stock recommendations",
+                    user_query=request.query,
                     market_analysis=market_analysis,
                     sentiment_data=sentiment_data,
                     max_recommendations=request.max_recommendations,

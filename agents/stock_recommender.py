@@ -31,7 +31,8 @@ class StockRecommenderAgent(Agent):
         self.claude_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
     
     async def generate_recommendations(self, 
-                                     market_analysis: str,
+                                     user_query: str = "",
+                                     market_analysis: str = "",
                                      sentiment_data: Optional[Dict[str, Any]] = None,
                                      max_recommendations: int = 3,
                                      risk_preference: str = "medium") -> List[StockRecommendation]:
@@ -39,6 +40,7 @@ class StockRecommenderAgent(Agent):
         Generate stock recommendations using Claude AI analysis.
         
         Args:
+            user_query: User's original query/request
             market_analysis: Market analysis from news agent
             sentiment_data: Sentiment analysis data
             max_recommendations: Maximum number of recommendations
@@ -49,7 +51,7 @@ class StockRecommenderAgent(Agent):
         """
         try:
             # Prepare context for Claude
-            context = self._prepare_analysis_context(market_analysis, sentiment_data, risk_preference)
+            context = self._prepare_analysis_context(user_query, market_analysis, sentiment_data, risk_preference)
             
             # Generate recommendations using Claude
             recommendations_text = await self._get_claude_recommendations(context, max_recommendations)
@@ -68,7 +70,8 @@ class StockRecommenderAgent(Agent):
             # Return fallback recommendations
             return await self._get_fallback_recommendations(max_recommendations, risk_preference)
     
-    def _prepare_analysis_context(self, market_analysis: str, 
+    def _prepare_analysis_context(self, user_query: str,
+                                market_analysis: str, 
                                 sentiment_data: Optional[Dict[str, Any]], 
                                 risk_preference: str) -> str:
         """Prepare comprehensive context for Claude analysis."""
@@ -85,9 +88,16 @@ Sentiment Analysis:
 - Neutral articles: {summary.get('neutral_count', 0)}
 """
         
+        user_query_section = ""
+        if user_query:
+            user_query_section = f"""
+USER REQUEST: "{user_query}"
+⚠️ CRITICAL: Your recommendations MUST directly address this specific user request.
+"""
+        
         context = f"""
 INVESTMENT ANALYSIS CONTEXT
-
+{user_query_section}
 Market Analysis:
 {market_analysis}
 
@@ -100,7 +110,8 @@ Current Market Conditions:
 - Factor in economic indicators and sector performance
 - Assess risk levels appropriate for {risk_preference} risk tolerance
 
-TASK: Based on this analysis, recommend stocks that align with current market conditions and the specified risk preference.
+TASK: Based on this analysis, recommend stocks that align with the USER'S SPECIFIC REQUEST, current market conditions, and the specified risk preference.
+If the user requested specific sectors or stock types (e.g., "financial", "bank", "tech", "energy"), ONLY recommend stocks from those sectors.
 """
         return context
     
@@ -125,16 +136,21 @@ Please provide {max_recommendations} stock recommendations in the following JSON
 ]
 
 Focus on:
-1. Companies with strong fundamentals and growth potential
-2. Stocks that align with current market sentiment
-3. Appropriate risk levels for the specified preference
-4. ONE concise sentence summarizing the key investment thesis
+1. ⚠️ MOST IMPORTANT: Match the user's specific request (sector, industry, stock type)
+2. Companies with strong fundamentals and growth potential in the REQUESTED sector
+3. Stocks that align with current market sentiment
+4. Appropriate risk levels for the specified preference
+5. ONE concise sentence summarizing the key investment thesis
 
-Provide realistic stock symbols for well-known public companies.
+CRITICAL: If the user requested specific sectors (e.g., "financial", "bank services", "healthcare", "tech"), 
+you MUST ONLY recommend stocks from those sectors. Do NOT recommend stocks from other sectors.
+
+Provide realistic stock symbols for well-known public companies in the REQUESTED sector.
 """
         
         try:
             logger.info("Sending request to Claude API for stock recommendations")
+            logger.info(f"FULL PROMPT SENT TO CLAUDE:\n{prompt}")
             response = await self.claude_client.messages.create(
                 model="claude-sonnet-4-5-20250929",
                 max_tokens=2000,
@@ -147,7 +163,7 @@ Provide realistic stock symbols for well-known public companies.
                 ]
             )
             
-            logger.info("Successfully received response from Claude API")
+            logger.info(f"Successfully received response from Claude API: {response.content[0].text}")
             return response.content[0].text
             
         except Exception as e:
@@ -357,12 +373,17 @@ Provide realistic stock symbols for well-known public companies.
             AgentAnalysis with stock recommendations
         """
         try:
+            user_query = kwargs.get("user_query", "")
             market_analysis = kwargs.get("market_analysis", "")
             sentiment_data = kwargs.get("sentiment_data")
             max_recommendations = kwargs.get("max_recommendations", 3)
             risk_preference = kwargs.get("risk_preference", "medium")
             
+            logger.info(f"StockRecommender received user_query: '{user_query}'")
+            logger.info(f"StockRecommender received market_analysis length: {len(market_analysis)} chars")
+            
             recommendations = await self.generate_recommendations(
+                user_query=user_query,
                 market_analysis=market_analysis,
                 sentiment_data=sentiment_data,
                 max_recommendations=max_recommendations,

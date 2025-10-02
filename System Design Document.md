@@ -11,7 +11,7 @@ User Interface (CLI / Web)
          ↓
     Agno Agent Team
 ┌───────────────────────────┐
-│ • News Analyst Agent      │ → Yahoo Finance / Sentiment Analysis
+│ • News Analyst Agent      │ → Google News RSS / Yahoo Finance / Sentiment Analysis
 │ • Stock Recommender Agent │ → Claude LLM
 │ • Approval Manager Agent* │ → ElevenLabs TTS / Twilio
 │ • Response Coordinator    │
@@ -28,7 +28,7 @@ User Interface (CLI / Web)
 - **Python**: Backend simplicity
 - **Claude LLM**: Reasoning & analysis
 - **Sentiment Analysis**: VADER
-- **DataForSEO Google Finance API**: Real-time market data
+- **Google and Yahoo Finance**: Real-time market data
 - **ElevenLabs / Twilio**: Optional approval voice workflow
 - **Frontend**: simple web interface
 
@@ -52,16 +52,8 @@ User Interface (CLI / Web)
 
 ---
 
-## **4. Data Flow Architecture**
 
-```jsx
-User Query → News Analyst → Sentiment → Stock Recommender →
-(Optional) Approval Manager → Response Coordinator → User
-```
-
----
-
-## **5. Security & Reliability Considerations**
+## **4. Security & Reliability Considerations**
 
 - **API Security**: Environment variables for API keys, rate limiting, retries, input validation
 - **Error Handling**: Graceful degradation, logging, fallback for critical steps
@@ -70,7 +62,7 @@ User Query → News Analyst → Sentiment → Stock Recommender →
 
 ---
 
-## 6. Assumptions & Limitations
+## 5. Assumptions & Limitations
 
 - Twilio/ElevenLabs may be mocked due to trial limits
 - Stock recommendations illustrative; no real trading

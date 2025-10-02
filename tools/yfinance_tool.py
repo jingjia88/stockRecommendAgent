@@ -6,9 +6,11 @@ from datetime import datetime, timedelta
 import json
 import yfinance as yf
 import pandas as pd
+import aiohttp
 
 from agno.tools import tool
 from models import NewsArticle, StockData
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +25,19 @@ async def fetch_financial_news(query: str = "stock market", max_articles: int = 
         
         # Check if query looks like a stock symbol
         if len(query) <= 5 and query.replace('.', '').replace('-', '').isalnum():
-            # Treat as stock symbol
-            logger.info(f"Treating '{query}' as stock symbol")
+            # Treat as stock symbol - use Yahoo Finance
+            logger.info(f"Treating '{query}' as stock symbol, using Yahoo Finance")
             articles = _get_stock_news(query.upper(), max_articles)
         else:
-            # General market news
-            logger.info(f"Getting general market news for: {query}")
-            articles = _get_market_news(query, max_articles)
+            # General market news - Try Google News RSS first (real keyword search)
+            logger.info(f"Using Google News RSS for keyword search: {query}")
+            articles = await _search_news_with_google(query, max_articles)
+            
+            # If Google News fails or returns too few articles, fallback to Yahoo Finance
+            if len(articles) < max_articles // 2:
+                logger.warning(f"Google News returned only {len(articles)} articles, supplementing with Yahoo Finance")
+                yahoo_articles = _get_market_news(query, max_articles - len(articles))
+                articles.extend(yahoo_articles)
         
         result = {
             "type": "news",
@@ -165,10 +173,89 @@ def _get_stock_news(symbol: str, max_articles: int = 10) -> List[NewsArticle]:
         return []
 
 
+async def _search_news_with_google(query: str, max_articles: int = 10) -> List[NewsArticle]:
+    """
+    Search news using Google News RSS feed (completely free, no API key needed).
+    This provides REAL keyword-based news search.
+    """
+    try:
+        import feedparser
+        
+        # Google News RSS URL with query
+        # Example: https://news.google.com/rss/search?q=financial+bank+stocks&hl=en-US&gl=US&ceid=US:en
+        encoded_query = query.replace(' ', '+')
+        rss_url = f"https://news.google.com/rss/search?q={encoded_query}+stock+market&hl=en-US&gl=US&ceid=US:en"
+        
+        logger.info(f"Searching Google News RSS for: {query}")
+        logger.info(f"RSS URL: {rss_url}")
+        
+        # Parse RSS feed
+        feed = feedparser.parse(rss_url)
+        articles = []
+        
+        for entry in feed.entries[:max_articles]:
+            try:
+                # Parse published date
+                published_date = None
+                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                    from time import mktime
+                    published_date = datetime.fromtimestamp(mktime(entry.published_parsed))
+                
+                # Extract snippet from description
+                snippet = entry.get('summary', '')[:200] if hasattr(entry, 'summary') else ''
+                
+                article = NewsArticle(
+                    title=entry.title,
+                    url=entry.link,
+                    source=entry.get('source', {}).get('title', 'Google News') if hasattr(entry, 'source') else 'Google News',
+                    published_date=published_date,
+                    snippet=snippet
+                )
+                articles.append(article)
+                
+            except Exception as e:
+                logger.warning(f"Error parsing RSS entry: {e}")
+                continue
+        
+        logger.info(f"Found {len(articles)} articles from Google News RSS")
+        return articles
+        
+    except Exception as e:
+        logger.error(f"Error fetching from Google News RSS: {e}", exc_info=True)
+        return []
+
+
 def _get_market_news(query: str = "stock market", max_articles: int = 10) -> List[NewsArticle]:
-    """Get general market news by searching popular symbols."""
-    # Use major indices and popular stocks to get market news
-    market_symbols = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'GOOGL']
+    """Get general market news by searching popular symbols based on query."""
+    
+    # Detect sector/industry from query and select relevant symbols
+    query_lower = query.lower()
+    
+    # Map keywords to relevant stock symbols
+    sector_symbols = {
+        'financial': ['JPM', 'BAC', 'WFC', 'GS', 'C'],  # Banks and financial services
+        'bank': ['JPM', 'BAC', 'WFC', 'USB', 'PNC'],
+        'tech': ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'META'],
+        'healthcare': ['JNJ', 'UNH', 'PFE', 'ABBV', 'TMO'],
+        'energy': ['XOM', 'CVX', 'COP', 'SLB', 'EOG'],
+        'consumer': ['AMZN', 'WMT', 'PG', 'KO', 'NKE'],
+        'industrial': ['CAT', 'BA', 'GE', 'MMM', 'HON'],
+        'retail': ['AMZN', 'WMT', 'TGT', 'HD', 'LOW']
+    }
+    
+    # Find matching sector
+    market_symbols = None
+    for keyword, symbols in sector_symbols.items():
+        if keyword in query_lower:
+            market_symbols = symbols
+            logger.info(f"Detected '{keyword}' sector in query, using symbols: {symbols}")
+            break
+    
+    # Default to major indices and popular stocks if no sector detected
+    if not market_symbols:
+        market_symbols = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'GOOGL']
+        logger.info(f"No specific sector detected, using default symbols: {market_symbols}")
+    
     all_articles = []
     
     for symbol in market_symbols:

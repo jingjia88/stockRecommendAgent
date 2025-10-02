@@ -37,7 +37,7 @@ class NewsAnalystAgent(Agent):
             Dictionary with news analysis results
         """
         try:
-            logger.info(f"Starting news analysis for query: {query}")
+            logger.info(f"Starting news analysis for query: '{query}'")
             # Fetch news articles using Yahoo Finance helper function
             news_result = await fetch_financial_news(query, settings.max_news_articles)
             articles_data = news_result.get("articles", [])
@@ -113,17 +113,17 @@ class NewsAnalystAgent(Agent):
         total_articles = summary_stats.get("total_articles", 0)
         
         analysis = f"""
-📰 NEWS ANALYSIS REPORT
+NEWS ANALYSIS REPORT
 
-📊 Sentiment Overview:
+Sentiment Overview:
 • Overall Market Sentiment: {self._get_sentiment_label(compound_score)} (score: {compound_score:.3f})
 • Article Breakdown: {positive_count} positive, {negative_count} negative, {neutral_count} neutral
 • Total Articles Analyzed: {total_articles}
 
-🔍 Key Insights:
+Key Insights:
 {market_summary}
 
-📈 Investment Implications:
+Investment Implications:
 """
         
         if compound_score > 0.2:
