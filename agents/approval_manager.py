@@ -163,7 +163,6 @@ class ApprovalManagerAgent(Agent):
         avg_confidence_pct = int(total_confidence * 100)
         
         summary_parts.append(f"\nOverall confidence: {avg_confidence_pct}%")
-        summary_parts.append("Please approve or reject these recommendations.")
         
         return "\n".join(summary_parts)
     

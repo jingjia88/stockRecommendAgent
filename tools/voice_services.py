@@ -239,8 +239,6 @@ async def request_manager_approval(recommendations_summary: str, webhook_base_ur
         I need your approval for stock recommendations.
         
         {recommendations_summary}
-        
-        Please say YES to approve, or NO to reject.
         """
         
         audio_bytes = await _text_to_speech(message.strip())
