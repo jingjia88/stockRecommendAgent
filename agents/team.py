@@ -183,7 +183,7 @@ class StockRecommendationTeam:
     def _generate_market_summary(self, market_analysis: str, sentiment_data: Optional[Dict[str, Any]]) -> str:
         """Generate an overall market analysis summary."""
         
-        summary = "📊 COMPREHENSIVE MARKET ANALYSIS\n\n"
+        summary = "COMPREHENSIVE MARKET ANALYSIS\n\n"
         
         # Add sentiment overview if available
         if sentiment_data and "overall_sentiment" in sentiment_data:
@@ -207,7 +207,7 @@ class StockRecommendationTeam:
         summary += market_analysis
         
         # Add concluding remarks
-        summary += "\n\n🔍 INVESTMENT STRATEGY IMPLICATIONS:\n"
+        summary += "\n\n INVESTMENT STRATEGY IMPLICATIONS:\n"
         summary += "• Consider diversification across sectors and risk levels\n"
         summary += "• Monitor market developments and adjust positions accordingly\n"
         summary += "• Maintain appropriate risk management and position sizing\n"

@@ -371,6 +371,11 @@
                 include_approval: document.getElementById('includeApproval').checked
             };
             
+            // 清除之前的狀態
+            document.getElementById('approvalStatus').style.display = 'none';
+            document.getElementById('recommendations').style.display = 'none';
+            document.getElementById('humorNote').style.display = 'none';
+            
             // Show loading
             document.getElementById('loading').style.display = 'block';
             document.getElementById('results').style.display = 'none';
@@ -414,6 +419,7 @@
                 }
                 
                 const data = await response.json();
+                console.log('API Response:', data);  // 添加調試日誌
                 displayResults(data);
                 
             } catch (error) {
@@ -445,11 +451,17 @@
         });
         
         function displayResults(data) {
+            console.log('Displaying results:', data);  // 添加調試日誌
             const approvalDiv = document.getElementById('approvalStatus');
             const recommendationsDiv = document.getElementById('recommendations');
             
+            // 清除之前的狀態
+            approvalDiv.style.display = 'none';
+            recommendationsDiv.style.display = 'block';
+            
             // Check approval status
             if (data.approval) {
+                console.log('Approval data found:', data.approval);  // 添加調試日誌
                 const isApproved = data.approval.status === 'approved';
                 
                 if (isApproved) {
@@ -523,8 +535,10 @@
                             <div style="white-space: pre-wrap;">${rec.reasoning}</div>
                         </div>
                     `).join('');
+                    recommendationsDiv.style.display = 'block';  // 強制顯示
                 } else {
                     recommendationsDiv.innerHTML = '<p>No recommendations available.</p>';
+                    recommendationsDiv.style.display = 'block';  // 強制顯示
                 }
             }
             
